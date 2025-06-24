@@ -1,101 +1,52 @@
-### 🧪 **DevOps Intern Assignment: Nginx Reverse Proxy + Docker**
+# Nginx Multi-Service Proxy
 
-You are expected to set up a simple system where:
-
-1. **Two Dockerized backend services** (can be dummy services) run on different ports.
-2. An **Nginx reverse proxy** (also in a Docker container) routes:
-
-   * `/service1` requests to backend service 1
-   * `/service2` requests to backend service 2
-3. All services must be accessible via a single port (e.g., `localhost:8080`).
-
+A multi-service architecture using Docker Compose, Nginx as a reverse proxy, and two backend services (one in Go, one in Python).
 ---
 
-### ✅ **Requirements**
+## Setup Instructions
 
-1. Use Docker Compose to bring up the entire system.
-2. Each backend service should respond with a JSON payload like:
-
-   ```json
-   {"service": "service1"}
-   ```
-3. The Nginx config should support:
-
-   * Routing based on URL path prefix (`/service1`, `/service2`)
-   * Logging incoming requests with timestamp and path
-4. The system should work with a single command:
-
+1. **Build and start all services with Docker Compose:**
    ```bash
    docker-compose up --build
    ```
-5. Bonus: Add a health check for both services and show logs of successful routing.
+   This will build and start:
+   - `service_1` (Go, port 8001)
+   - `service_2` (Python, port 8002)
+   - `nginx` (reverse proxy, exposed on port 8080)
+
+3. **Access the services via Nginx:**
+   - [http://localhost:8080/service1/ping](http://localhost:8080/service1/ping)
+   - [http://localhost:8080/service2/ping](http://localhost:8080/service2/ping)
 
 ---
 
-### 📁 Suggested Project Structure
+## How Routing Works (Nginx Configuration)
 
-```
-.
-├── docker-compose.yml
-├── nginx
-│   ├── default.conf
-│   └── Dockerfile
-├── service_1
-│   ├── app.py
-│   └── Dockerfile
-├── service_2
-│   ├── app.py
-│   └── Dockerfile
-└── README.md
-```
+- Nginx listens on port **80** (mapped to host **8080**).
+- Requests to `/service1/` are proxied to `service_1` (Go) on port 8001.
+- Requests to `/service2/` are proxied to `service_2` (Python) on port 8002.
+- The routing is defined in [`nginx/nginx.conf`](nginx/nginx.conf):
 
----
-
-### 📦 Tech Constraints
-
-* Nginx must run in a Docker container, not on host
-* Use bridge networking (no host networking)
+  ```nginx
+  location /service1/ {
+      proxy_pass http://service1/;
+  }
+  location /service2/ {
+      proxy_pass http://service2/;
+  }
+  ```
 
 ---
 
-### 📝 Submission Instructions
+## Bonus Features
 
-1. Upload your project to GitHub or GitLab.
-2. Include a short `README.md` with:
+- **Health Checks:**
+  - Both backend services expose a `/ping` endpoint for health checks.
+  - Docker Compose waits for both services to be healthy before starting Nginx.
 
-   * Setup instructions
-   * How routing works
-   * Any bonus you implemented
-3. Deadline: **1 week**
-4. Bonus points for:
-
-   * Logging clarity
-   * Clean and modular Docker setup
-   * Healthcheck or automated test script
-
----
-
-### ❓FAQs
-
-**Q: Is this a full-time role?**
-Yes. You would need to be in office in Bangalore.
-
-**Q: Is there a stipend?**
-Yes. 20k INR per month
-
-**Q: How many positions are open?**
-Two positions are open.
-
-**Q: I am still in college. Can I apply?**
-Unfortunately, we are looking for post-college candidates.
-
-**Q: Can I reach out for doubts?**
-No — due to the volume of submissions. Please use your creativity and assumptions where needed.
-
-**Q: Can I use ChatGPT or Copilot?**
-Yes, feel free to use AI tools — we care about your implementation and understanding.
-
-**Q: This feels like a lot for an intern assignment.**
-We agree it’s non-trivial — we’ve received many applications, so this helps us filter based on quality.
-
-
+- **Custom Logging:**
+  - A custom log format to log the time and request URI:
+    ```nginx
+    log_format custom '$time_local | $request_uri';
+    access_log /var/log/nginx/access.log custom;
+    ```
